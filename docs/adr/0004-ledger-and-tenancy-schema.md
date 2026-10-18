@@ -1,6 +1,6 @@
 # ADR-0004: Ledger and tenancy schema
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-18
 
 ## Context
@@ -60,14 +60,73 @@ Requirements that shape the design:
 - Accounts are archived, never deleted, once they have lines. The normal
   balance side is derived from `type`, not stored.
 - Account type cannot change after the account has lines.
-- New businesses are seeded from a template chart (small-business defaults),
-  which the user can edit. Wave import (Phase 6) maps into the same structure.
+- New businesses are seeded from the default template below, which the user can
+  edit. Wave import (Phase 6) maps into the same structure.
+
+#### Default chart (standard small business)
+Codes follow the usual convention: 1xxx assets, 2xxx liabilities, 3xxx equity,
+4xxx income, 5xxx cost of goods sold, 6xxx operating expenses. Cost of goods
+sold uses type `expense`; there is no separate type. Accounts marked (system)
+are created for every business and cannot be archived, because imports and
+opening balances post to them.
+
+| Code | Name | Type |
+| --- | --- | --- |
+| 1000 | Cash on Hand | asset |
+| 1010 | Checking | asset |
+| 1020 | Savings | asset |
+| 1100 | Accounts Receivable | asset |
+| 1200 | Inventory | asset |
+| 1300 | Prepaid Expenses | asset |
+| 1500 | Equipment | asset |
+| 1510 | Accumulated Depreciation | asset (contra) |
+| 2000 | Accounts Payable | liability |
+| 2100 | Credit Card | liability |
+| 2200 | Sales Tax Payable | liability |
+| 2300 | Payroll Liabilities | liability |
+| 2500 | Loans Payable | liability |
+| 3000 | Owner's Equity | equity |
+| 3100 | Owner's Contributions | equity |
+| 3200 | Owner's Draws | equity |
+| 3800 | Opening Balance Equity (system) | equity |
+| 3900 | Retained Earnings (system) | equity |
+| 4000 | Sales | income |
+| 4100 | Service Revenue | income |
+| 4200 | Interest Income | income |
+| 4300 | Other Income | income |
+| 4900 | Uncategorized Income (system) | income |
+| 5000 | Cost of Goods Sold | expense |
+| 5100 | Shipping and Freight | expense |
+| 6000 | Advertising and Marketing | expense |
+| 6010 | Bank Fees | expense |
+| 6020 | Contractors | expense |
+| 6030 | Depreciation | expense |
+| 6040 | Insurance | expense |
+| 6050 | Interest Expense | expense |
+| 6060 | Licenses and Permits | expense |
+| 6070 | Meals | expense |
+| 6080 | Office Supplies | expense |
+| 6090 | Professional Fees | expense |
+| 6100 | Rent | expense |
+| 6110 | Repairs and Maintenance | expense |
+| 6120 | Software and Subscriptions | expense |
+| 6130 | Taxes | expense |
+| 6140 | Travel | expense |
+| 6150 | Utilities | expense |
+| 6160 | Wages and Salaries | expense |
+| 6900 | Uncategorized Expense (system) | expense |
+
+Uncategorized income and expense are where imported and rule-less transactions
+land until the user categorizes them. Other templates (by industry) can be added
+later without schema changes.
 
 ### 3. Ledger
 - **Amounts are integers in minor units** (`bigint`, e.g. cents), never floats
   or `numeric` with rounding. Currency is an ISO 4217 code per business.
-  **Single currency per business in v1**; multi-currency is deferred, and
-  `currency` columns are kept so it can be added without a rewrite.
+  **Exactly one currency per business in v1** (decided); multi-currency is
+  deferred, and `currency` columns are kept so it can be added without a
+  rewrite. A business's currency is set at creation and cannot change once it
+  has lines.
 - Tables:
   - `transactions`: the user-facing record (`kind`: `deposit`, `withdrawal`,
     `transfer`, `journal`; `date`, `description`, `notes`, category and tags
@@ -102,6 +161,10 @@ Requirements that shape the design:
 - Append-only `audit_log` (`business_id`, `actor_user_id`, `action`,
   `entity`, `entity_id`, `at`, `before`/`after` JSON where useful). Written in the
   same transaction as the change. Immutable by trigger, like the ledger.
+- **Viewers cannot read the audit log** (decided). Owners, admins and
+  bookkeepers can. This is enforced in the API layer by role. Because RLS keys
+  on business and not role, the audit log read is also tested per role so a
+  viewer request returns 403 and never rows.
 
 ### 5. Conventions
 - Primary keys are UUIDv7 generated in the application, which gives
@@ -124,6 +187,8 @@ Requirements that shape the design:
   including with a forged `business_id` and with no `app.business_id` set. A
   test fails if a table with a `business_id` column lacks RLS, so new tables
   can't be added unprotected.
+- **Seed test:** the default chart balances in structure (every account has a
+  valid type, codes are unique, system accounts exist) for each new business.
 
 ## Alternatives considered
 - **Separate schema or database per tenant.** Strong isolation, but migrations,
@@ -153,9 +218,10 @@ Requirements that shape the design:
 - Migrations are more involved (roles, RLS, triggers) and need review.
 - Multi-currency, fiscal periods and custom roles are explicitly deferred and
   will need a follow-up ADR.
+- A business that earns or holds a second currency has to run a second
+  business for it until multi-currency lands.
 
-## Open questions
-- Should `viewer` be able to see the audit log? (Proposed: no.)
-- Is a single currency per business acceptable for the Wave migration audience?
-  (Proposed: yes for v1.)
-- Which template chart(s) to ship as defaults?
+## Resolved questions
+- Viewer access to the audit log: no.
+- Single currency per business for v1: yes.
+- Default chart: the standard small-business chart above.
