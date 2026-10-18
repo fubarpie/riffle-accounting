@@ -7,7 +7,7 @@
  */
 import { sql } from 'drizzle-orm';
 import {
-  bigint, boolean, char, customType, date, jsonb, pgEnum, pgTable, text, timestamp, uuid,
+  bigint, boolean, char, customType, date, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid,
 } from 'drizzle-orm/pg-core';
 
 export const membershipRole = pgEnum('membership_role', ['owner', 'admin', 'bookkeeper', 'viewer']);
@@ -115,4 +115,25 @@ export const auditLog = pgTable('audit_log', {
   at: timestamp('at', { withTimezone: true }).notNull().default(sql`now()`),
   before: jsonb('before'),
   after: jsonb('after'),
+});
+
+export const rules = pgTable('rules', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  name: text('name').notNull(),
+  priority: integer('priority').notNull().default(100),
+  strict: boolean('strict').notNull().default(true),
+  enabled: boolean('enabled').notNull().default(true),
+  conditions: jsonb('conditions').notNull(),
+  actions: jsonb('actions').notNull(),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const transactionTags = pgTable('transaction_tags', {
+  businessId: uuid('business_id').notNull(),
+  transactionId: uuid('transaction_id').notNull(),
+  tag: text('tag').notNull(),
+  createdAt: createdAt(),
 });
