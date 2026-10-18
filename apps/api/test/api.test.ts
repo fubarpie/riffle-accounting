@@ -28,7 +28,7 @@ interface Client {
 }
 
 async function signup(label = "u"): Promise<Client> {
-  const email = `${label}-${Date.now()}-${n++}@example.test`;
+  const email = `${label}-${Date.now()}-${n++}-${Math.random().toString(36).slice(2, 8)}@example.test`;
   const res = await app.inject({
     method: "POST", url: "/api/auth/register", payload: { email, name: label, password: PASSWORD },
   });

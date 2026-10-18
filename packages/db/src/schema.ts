@@ -7,12 +7,14 @@
  */
 import { sql } from 'drizzle-orm';
 import {
-  bigint, boolean, char, customType, date, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid,
+  bigint, boolean, char, customType, date, integer, jsonb, pgEnum, pgTable, smallint, text, timestamp, uuid,
 } from 'drizzle-orm/pg-core';
 
 export const membershipRole = pgEnum('membership_role', ['owner', 'admin', 'bookkeeper', 'viewer']);
 export const accountType = pgEnum('account_type', ['asset', 'liability', 'equity', 'income', 'expense']);
 export const transactionKind = pgEnum('transaction_kind', ['deposit', 'withdrawal', 'transfer', 'journal']);
+export const bankConnectionStatus = pgEnum('bank_connection_status', ['active', 'disabled', 'error']);
+export const stagedStatus = pgEnum('staged_status', ['new', 'approved', 'ignored', 'posted']);
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`);
 const updatedAt = () => timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`);
@@ -136,4 +138,53 @@ export const transactionTags = pgTable('transaction_tags', {
   transactionId: uuid('transaction_id').notNull(),
   tag: text('tag').notNull(),
   createdAt: createdAt(),
+});
+
+export const bankConnections = pgTable('bank_connections', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  label: text('label').notNull(),
+  /** AES-256-GCM envelope. Never select this outside bank/connections.ts#getAccessUrl. */
+  accessUrlEnc: bytea('access_url_enc').notNull(),
+  accessUrlKeyId: text('access_url_key_id').notNull(),
+  status: bankConnectionStatus('status').notNull().default('active'),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  scheduleMinute: smallint('schedule_minute').notNull().default(0),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const bankAccountLinks = pgTable('bank_account_links', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  connectionId: uuid('connection_id').notNull(),
+  externalAccountId: text('external_account_id').notNull(),
+  externalName: text('external_name').notNull().default(''),
+  accountId: uuid('account_id').notNull(),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const stagedTransactions = pgTable('staged_transactions', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  connectionId: uuid('connection_id'),
+  source: text('source').notNull().default('simplefin'),
+  linkId: uuid('link_id'),
+  accountId: uuid('account_id').notNull(),
+  externalId: text('external_id').notNull(),
+  postedDate: date('posted_date').notNull(),
+  amountMinor: bigint('amount_minor', { mode: 'bigint' }).notNull(),
+  description: text('description').notNull().default(''),
+  pending: boolean('pending').notNull().default(false),
+  raw: jsonb('raw').notNull().default(sql`'{}'::jsonb`),
+  status: stagedStatus('status').notNull().default('new'),
+  categoryAccountId: uuid('category_account_id'),
+  transactionId: uuid('transaction_id'),
+  createdBy: uuid('created_by').notNull(),
+  importedAt: timestamp('imported_at', { withTimezone: true }).notNull().default(sql`now()`),
+  updatedAt: updatedAt(),
 });
