@@ -27,5 +27,9 @@ requiring maintainers to manage registry credentials.
 ## Consequences
 - A broken or vulnerable image is never published.
 - Anyone can test a PR by pulling `pr-<n>` and running `docker compose up`.
-- Third-party actions are referenced by version tag; Dependabot keeps them
-  current. Pinning to commit SHAs is a possible later hardening step.
+- Third-party actions are pinned in two tiers. The Trivy scanner action, which
+  runs against our build artifacts, is pinned to a full commit SHA with the
+  release version in a trailing comment (`# v0.36.0`). The remaining actions
+  (GitHub-owned and Docker-maintained) are referenced by major version tag
+  (for example `@v4`). Dependabot updates both forms. Moving the remaining
+  actions to commit SHAs is a possible later hardening step.
