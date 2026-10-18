@@ -16,6 +16,10 @@ export RIFFLE_IMAGE="$IMAGE"
 export RIFFLE_PORT="$PORT"
 POSTGRES_PASSWORD="$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
 export POSTGRES_PASSWORD
+RIFFLE_APP_DB_PASSWORD="$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+export RIFFLE_APP_DB_PASSWORD
+# The smoke test talks plain http, so the Secure cookie flag would stop curl re-sending it.
+export COOKIE_SECURE=false
 
 compose() { docker compose -p "$PROJECT" -f docker-compose.yml "$@"; }
 
@@ -48,6 +52,21 @@ curl --fail --silent --show-error --max-time 5 "http://127.0.0.1:${PORT}/" | gre
 echo "Checking SPA fallback..."
 curl --fail --silent --show-error --max-time 5 "http://127.0.0.1:${PORT}/some/client/route" | grep -qi "<title>Riffle</title>" \
   || { echo "SPA fallback failed" >&2; exit 1; }
+
+echo "Checking sign-up, session and tenant API..."
+jar="$(mktemp)"
+trap 'rm -f "$jar"; cleanup' EXIT
+base="http://127.0.0.1:${PORT}"
+curl --fail --silent --show-error --max-time 10 -c "$jar" -H 'content-type: application/json' \
+  -d '{"email":"smoke@example.test","name":"Smoke","password":"smoke-test-password"}' \
+  "$base/api/auth/register" >/dev/null || { echo "register failed" >&2; exit 1; }
+curl --fail --silent --show-error --max-time 5 -b "$jar" "$base/api/auth/me" | grep -q 'smoke@example.test' \
+  || { echo "session not accepted" >&2; exit 1; }
+curl --fail --silent --show-error --max-time 10 -b "$jar" -H 'content-type: application/json' \
+  -d '{"name":"Smoke Co","currency":"USD"}' "$base/api/businesses" | grep -q '"role":"owner"' \
+  || { echo "create business failed" >&2; exit 1; }
+unauth="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 "$base/api/businesses")"
+[ "$unauth" = "401" ] || { echo "expected 401 without a session, got $unauth" >&2; exit 1; }
 
 echo "Checking worker health (via container healthcheck)..."
 worker_id="$(compose ps -q worker)"

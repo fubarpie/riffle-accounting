@@ -24,7 +24,7 @@ export function validateLines(lines: readonly LineInput[]): void {
   if (sum !== 0n) throw new LedgerInputError(`entry is unbalanced by ${sum}`);
 }
 
-async function audit(
+export async function audit(
   c: PoolClient, businessId: string, actor: string, action: string,
   entity: string, entityId: string, before: unknown, after: unknown,
 ): Promise<void> {
