@@ -8,7 +8,9 @@ import type { Pool } from "pg";
 import { authPlugin } from "./auth-plugin";
 import { type ApiConfig, configFromEnv } from "./config";
 import { installErrorHandler } from "./errors";
+import type { FetchLike } from "@riffle/simplefin";
 import { authRoutes } from "./routes/auth";
+import { bankRoutes } from "./routes/bank";
 import { businessRoutes } from "./routes/businesses";
 import { ruleRoutes } from "./routes/rules";
 import { reportRoutes } from "./routes/reports";
@@ -23,6 +25,8 @@ export interface AppOptions {
   /** Application database pool (role riffle_app). Without it only /healthz and the web UI are served. */
   pool?: Pool | undefined;
   config?: ApiConfig | undefined;
+  /** fetch used for SimpleFIN calls. Tests inject a mock. */
+  simplefinFetch?: FetchLike | undefined;
 }
 
 /**
@@ -48,6 +52,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     await app.register(businessRoutes, { pool: options.pool });
     await app.register(ruleRoutes, { pool: options.pool });
     await app.register(reportRoutes, { pool: options.pool });
+    await app.register(bankRoutes, { pool: options.pool, config, fetchImpl: options.simplefinFetch ?? fetch });
   }
 
   const webDist = options.webDist;
