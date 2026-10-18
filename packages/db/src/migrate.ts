@@ -3,7 +3,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Pool } from 'pg';
 
-const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
+// RIFFLE_MIGRATIONS_DIR lets the bundled server (whose files live elsewhere) find the SQL.
+const MIGRATIONS_DIR = process.env.RIFFLE_MIGRATIONS_DIR
+  ?? join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
 
 /**
  * Apply pending SQL migrations in filename order, each in its own transaction.
@@ -41,4 +43,19 @@ export async function migrate(pool: Pool, dir: string = MIGRATIONS_DIR): Promise
     client.release();
   }
   return applied;
+}
+
+/**
+ * Give the restricted application role a login password. Run as the owner
+ * after migrating. ALTER ROLE cannot take bind parameters, so the literal is
+ * escaped by the driver.
+ */
+export async function setAppRolePassword(pool: Pool, password: string): Promise<void> {
+  if (password.length < 16) throw new Error('application role password must be at least 16 characters');
+  const client = await pool.connect();
+  try {
+    await client.query(`ALTER ROLE riffle_app LOGIN PASSWORD ${client.escapeLiteral(password)}`);
+  } finally {
+    client.release();
+  }
 }

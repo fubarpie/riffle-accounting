@@ -7,7 +7,7 @@
  */
 import { sql } from 'drizzle-orm';
 import {
-  bigint, boolean, char, date, jsonb, pgEnum, pgTable, text, timestamp, uuid,
+  bigint, boolean, char, customType, date, jsonb, pgEnum, pgTable, text, timestamp, uuid,
 } from 'drizzle-orm/pg-core';
 
 export const membershipRole = pgEnum('membership_role', ['owner', 'admin', 'bookkeeper', 'viewer']);
@@ -24,6 +24,18 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
+});
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' });
+
+export const sessions = pgTable('sessions', {
+  id: uuid('id').primaryKey(),
+  tokenHash: bytea('token_hash').notNull(),
+  userId: uuid('user_id').notNull(),
+  createdAt: createdAt(),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().default(sql`now()`),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  userAgent: text('user_agent'),
 });
 
 export const businesses = pgTable('businesses', {
