@@ -4,6 +4,12 @@ import { join } from "node:path";
 import fastifyStatic from "@fastify/static";
 import { type HealthResponse, getVersion } from "@riffle/shared";
 import Fastify, { type FastifyInstance } from "fastify";
+import type { Pool } from "pg";
+import { authPlugin } from "./auth-plugin";
+import { type ApiConfig, configFromEnv } from "./config";
+import { installErrorHandler } from "./errors";
+import { authRoutes } from "./routes/auth";
+import { businessRoutes } from "./routes/businesses";
 
 export interface AppOptions {
   /** Directory containing the built web UI. When absent, only the API is served. */
@@ -12,6 +18,9 @@ export interface AppOptions {
   logger?: boolean;
   /** Build version reported by /healthz. */
   version?: string;
+  /** Application database pool (role riffle_app). Without it only /healthz and the web UI are served. */
+  pool?: Pool | undefined;
+  config?: ApiConfig | undefined;
 }
 
 /**
@@ -27,6 +36,15 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     service: "riffle-api",
     version,
   }));
+
+  installErrorHandler(app);
+  if (options.pool) {
+    const config = options.config ?? configFromEnv();
+    // Called directly (not app.register) so its hooks apply to every route.
+    await authPlugin(app, { pool: options.pool, config });
+    await app.register(authRoutes, { pool: options.pool, config });
+    await app.register(businessRoutes, { pool: options.pool });
+  }
 
   const webDist = options.webDist;
   if (webDist && existsSync(join(webDist, "index.html"))) {
