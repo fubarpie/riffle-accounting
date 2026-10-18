@@ -84,7 +84,7 @@ jobs:
 
       # 2. Run the full stack from that image and check it.
       - name: Smoke test
-        run: scripts/smoke.sh riffle-accounting:test
+        run: bash scripts/smoke.sh riffle-accounting:test
 
       # 3. Fail on fixable CRITICAL vulnerabilities.
       - name: Scan image with Trivy
