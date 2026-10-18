@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   BankInputError, BooksLockedError, ConnectionDisabledError, ForbiddenError, LedgerInputError,
-  NotAMemberError, NotFoundError as DbNotFoundError, RuleValidationError, StagedStateError,
+  NotAMemberError, NotFoundError as DbNotFoundError, ReconciliationInputError, ReconciliationStateError,
+  RuleValidationError, StagedStateError,
 } from "@riffle/db";
 import {
   SimpleFinAccessRevokedError, SimpleFinClaimError, SimpleFinError, SimpleFinInputError,
@@ -42,6 +43,8 @@ export function installErrorHandler(app: FastifyInstance): void {
     }
     if (err instanceof Unavailable) return reply.code(503).send({ error: err.message });
     if (err instanceof BankInputError) return reply.code(422).send({ error: err.message });
+    if (err instanceof ReconciliationInputError) return reply.code(422).send({ error: err.message });
+    if (err instanceof ReconciliationStateError) return reply.code(409).send({ error: err.message });
     if (err instanceof StagedStateError || err instanceof ConnectionDisabledError) {
       return reply.code(409).send({ error: err.message });
     }
@@ -57,6 +60,8 @@ export function installErrorHandler(app: FastifyInstance): void {
     }
     if (err instanceof Conflict) return reply.code(409).send({ error: err.message });
     if (err instanceof LedgerInputError) return reply.code(422).send({ error: err.message });
+    // Immutability guards (lock date, reconciled lines, finalised reconciliations).
+    if (err.code === "55000") return reply.code(409).send({ error: "Refused: the record is locked or already finalised" });
     if (err.code === "23514") return reply.code(409).send({ error: "A business must keep at least one owner" });
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ error: err.message });
     request.log.error({ err }, "unhandled error");
