@@ -71,7 +71,7 @@ jobs:
 
       # 1. Build a single-arch image into the local Docker daemon for testing.
       - name: Build image for testing (linux/amd64)
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: docker/Dockerfile
@@ -103,7 +103,7 @@ jobs:
       #    step 1, so only the arm64 build does new work.
       - name: Build and push (linux/amd64, linux/arm64)
         if: steps.publish.outputs.push == 'true'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: docker/Dockerfile
