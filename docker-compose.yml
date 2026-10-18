@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Deployment stack: PostgreSQL + Riffle API/web + Riffle worker.
 #
-#   cp .env.example .env     # then set POSTGRES_PASSWORD
+#   cp env.example .env     # then set POSTGRES_PASSWORD
 #   docker compose up -d
 #
 # The image comes from GHCR by default. Override RIFFLE_IMAGE in .env to pin a

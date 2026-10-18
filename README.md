@@ -16,7 +16,7 @@ Licensed under the [AGPL-3.0-or-later](LICENSE).
 ```bash
 git clone https://github.com/fubarpie/riffle-accounting.git
 cd riffle-accounting
-cp .env.example .env
+cp env.example .env
 # edit .env and set POSTGRES_PASSWORD (for example: openssl rand -hex 24)
 docker compose up -d
 ```
@@ -60,7 +60,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 Run the same smoke test CI uses against any image:
 
 ```bash
-scripts/smoke.sh riffle-accounting:dev
+bash scripts/smoke.sh riffle-accounting:dev
 ```
 
 ## Repository layout
