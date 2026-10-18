@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { ForbiddenError, LedgerInputError, NotAMemberError } from "@riffle/db";
+import { ForbiddenError, LedgerInputError, NotAMemberError, RuleValidationError } from "@riffle/db";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
@@ -13,6 +13,7 @@ type AppError = Error & { code?: string; statusCode?: number };
 export function installErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((err: AppError, request, reply) => {
     if (err instanceof z.ZodError) return reply.code(400).send({ error: "Invalid request", issues: err.issues });
+    if (err instanceof RuleValidationError) return reply.code(400).send({ error: "Invalid rule", issues: err.issues });
     // "Not a member" and "no such business" look identical, so ids cannot be probed.
     if (err instanceof NotAMemberError || err instanceof NotFound) return reply.code(404).send({ error: "Not found" });
     if (err instanceof ForbiddenError || err instanceof Refused) return reply.code(403).send({ error: "Forbidden" });

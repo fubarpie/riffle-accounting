@@ -10,6 +10,8 @@ import { type ApiConfig, configFromEnv } from "./config";
 import { installErrorHandler } from "./errors";
 import { authRoutes } from "./routes/auth";
 import { businessRoutes } from "./routes/businesses";
+import { ruleRoutes } from "./routes/rules";
+import { reportRoutes } from "./routes/reports";
 
 export interface AppOptions {
   /** Directory containing the built web UI. When absent, only the API is served. */
@@ -44,6 +46,8 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     await authPlugin(app, { pool: options.pool, config });
     await app.register(authRoutes, { pool: options.pool, config });
     await app.register(businessRoutes, { pool: options.pool });
+    await app.register(ruleRoutes, { pool: options.pool });
+    await app.register(reportRoutes, { pool: options.pool });
   }
 
   const webDist = options.webDist;
