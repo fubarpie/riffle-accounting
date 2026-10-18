@@ -46,6 +46,10 @@ services:
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
       COOKIE_SECURE: ${COOKIE_SECURE:-}
       TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
+      # Encrypts SimpleFIN Access URLs. Optional until bank import is used; the
+      # worker needs the same key ring to decrypt them.
+      RIFFLE_SECRET_KEY: ${RIFFLE_SECRET_KEY:-}
+      BANK_IMPORT_MIN_INTERVAL_SECONDS: ${BANK_IMPORT_MIN_INTERVAL_SECONDS:-}
     ports:
       - "${RIFFLE_PORT:-3000}:3000"
     volumes:
@@ -62,6 +66,13 @@ services:
       <<: *riffle-env
       MODE: worker
       PORT: "3001"
+      # Same key ring as the api. With it set (and DATABASE_URL) the worker runs
+      # the daily SimpleFIN import; see docs/worker-import.md.
+      RIFFLE_SECRET_KEY: ${RIFFLE_SECRET_KEY:-}
+      RIFFLE_IMPORT_ENABLED: ${RIFFLE_IMPORT_ENABLED:-}
+      RIFFLE_IMPORT_INTERVAL_SECONDS: ${RIFFLE_IMPORT_INTERVAL_SECONDS:-}
+      RIFFLE_IMPORT_CONCURRENCY: ${RIFFLE_IMPORT_CONCURRENCY:-}
+      RIFFLE_IMPORT_RETRY_MINUTES: ${RIFFLE_IMPORT_RETRY_MINUTES:-}
     volumes:
       - riffle-data:/data
 
