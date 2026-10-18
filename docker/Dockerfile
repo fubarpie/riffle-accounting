@@ -40,6 +40,15 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 # ---- runtime: small, non-root image -----------------------------------------
 FROM node:${NODE_VERSION}-slim AS runtime
 
+# The Node base image can lag behind Debian security fixes. perl-base ships in
+# every Debian slim image and is the package the CI vulnerability scan flags
+# (CVE-2026-8376), so pull the patched version. Upgrade only this package to
+# keep the layer small and the build reproducible; drop this step once the
+# upstream base image includes the fix.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade perl-base \
+    && rm -rf /var/lib/apt/lists/*
+
 ARG APP_VERSION=dev
 ARG VCS_REF=unknown
 LABEL org.opencontainers.image.title="Riffle" \
