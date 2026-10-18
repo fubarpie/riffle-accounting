@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Deployment stack: PostgreSQL + Riffle API/web + Riffle worker.
 #
-#   cp env.example .env     # then set POSTGRES_PASSWORD
+#   cp env.example .env     # then set POSTGRES_PASSWORD and RIFFLE_APP_DB_PASSWORD
 #   docker compose up -d
 #
 # The image comes from GHCR by default. Override RIFFLE_IMAGE in .env to pin a
@@ -10,7 +10,8 @@
 name: riffle
 
 x-riffle-env: &riffle-env
-  DATABASE_URL: postgres://${POSTGRES_USER:-riffle}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-riffle}
+  # Runtime connections use the restricted riffle_app role (subject to row-level security).
+  DATABASE_URL: postgres://riffle_app:${RIFFLE_APP_DB_PASSWORD:?Set RIFFLE_APP_DB_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-riffle}
 
 services:
   postgres:
@@ -39,6 +40,12 @@ services:
       <<: *riffle-env
       MODE: api
       PORT: "3000"
+      # Only the API holds the owner credentials: it applies migrations at start-up.
+      MIGRATE_DATABASE_URL: postgres://${POSTGRES_USER:-riffle}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-riffle}
+      APP_DB_PASSWORD: ${RIFFLE_APP_DB_PASSWORD}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
     ports:
       - "${RIFFLE_PORT:-3000}:3000"
     volumes:

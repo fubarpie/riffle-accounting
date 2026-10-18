@@ -63,6 +63,7 @@ ENV NODE_ENV=production \
     MODE=api \
     PORT=3000 \
     WEB_DIST=/app/web \
+    RIFFLE_MIGRATIONS_DIR=/app/migrations \
     DATA_DIR=/data \
     APP_VERSION=${APP_VERSION}
 
@@ -77,6 +78,7 @@ COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/worker/package.json ./apps/worker/package.json
 COPY --from=build /app/apps/worker/dist ./apps/worker/dist
 COPY --from=build /app/apps/web/dist ./web
+COPY --from=build /app/packages/db/migrations ./migrations
 COPY LICENSE NOTICE ./
 COPY docker/entrypoint.sh /usr/local/bin/riffle-entrypoint
 
