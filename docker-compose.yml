@@ -50,10 +50,14 @@ services:
       # worker needs the same key ring to decrypt them.
       RIFFLE_SECRET_KEY: ${RIFFLE_SECRET_KEY:-}
       BANK_IMPORT_MIN_INTERVAL_SECONDS: ${BANK_IMPORT_MIN_INTERVAL_SECONDS:-}
+      # Statement vault: uploaded statements live on the riffle-statements volume.
+      STATEMENT_STORAGE_DIR: ${STATEMENT_STORAGE_DIR:-/data/statements}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-}
     ports:
       - "${RIFFLE_PORT:-3000}:3000"
     volumes:
       - riffle-data:/data
+      - riffle-statements:/data/statements
 
   worker:
     image: ${RIFFLE_IMAGE:-ghcr.io/fubarpie/riffle-accounting:latest}
@@ -79,3 +83,4 @@ services:
 volumes:
   pgdata:
   riffle-data:
+  riffle-statements:
