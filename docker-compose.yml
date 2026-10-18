@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Deployment stack: PostgreSQL + Riffle API/web + Riffle worker.
+#
+#   cp .env.example .env     # then set POSTGRES_PASSWORD
+#   docker compose up -d
+#
+# The image comes from GHCR by default. Override RIFFLE_IMAGE in .env to pin a
+# version, or use docker-compose.dev.yml to build from local source.
+
+name: riffle
+
+x-riffle-env: &riffle-env
+  DATABASE_URL: postgres://${POSTGRES_USER:-riffle}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-riffle}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-riffle}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-riffle}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    image: ${RIFFLE_IMAGE:-ghcr.io/fubarpie/riffle-accounting:latest}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *riffle-env
+      MODE: api
+      PORT: "3000"
+    ports:
+      - "${RIFFLE_PORT:-3000}:3000"
+    volumes:
+      - riffle-data:/data
+
+  worker:
+    image: ${RIFFLE_IMAGE:-ghcr.io/fubarpie/riffle-accounting:latest}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *riffle-env
+      MODE: worker
+      PORT: "3001"
+    volumes:
+      - riffle-data:/data
+
+volumes:
+  pgdata:
+  riffle-data:

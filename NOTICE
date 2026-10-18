@@ -1,0 +1,32 @@
+Riffle
+Copyright (C) 2026 The Riffle contributors
+Licensed under the GNU Affero General Public License, version 3 or (at your
+option) any later version. See the LICENSE file.
+
+Riffle is an independent project. It is not affiliated with, endorsed by, or
+derived from Wave Financial, Firefly III, Akaunting, Actual Budget, or any
+other project named in its documentation.
+
+Third-party attribution
+-----------------------
+This file lists code, schemas, or designs that Riffle ports or adapts from
+other projects. Entries are added in the same pull request that introduces the
+adapted code, and each adapted source file also carries a header comment
+naming the original.
+
+Planned references (nothing has been ported yet):
+
+  Firefly III  - AGPL-3.0-or-later
+    https://github.com/firefly-iii/firefly-iii
+    Rule engine semantics (triggers, actions, strict/non-strict matching) and
+    SimpleFIN client behaviour. Copyright (C) James Cole and Firefly III
+    contributors.
+
+  Actual Budget - MIT
+    https://github.com/actualbudget/actual
+    SimpleFIN client behaviour. The MIT copyright notice and license text will
+    be reproduced here when any code is adapted.
+
+Third-party runtime dependencies are installed from npm and retain their own
+licenses; see each package's license file in node_modules or the SBOM attached
+to published container images.
