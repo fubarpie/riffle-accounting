@@ -74,6 +74,8 @@ export function createClient(fetchFn: FetchFn) {
     logout: () => request<undefined>("POST", "/api/auth/logout"),
 
     businesses: () => request<{ businesses: BusinessSummary[] }>("GET", "/api/businesses"),
+    createBusiness: (name: string, currency: string) =>
+      request<{ business: BusinessSummary }>("POST", "/api/businesses", { json: { name, currency } }),
     business: (id: string) => request<{ business: BusinessSummary }>("GET", biz(id)),
     accounts: (id: string) => request<{ accounts: Account[] }>("GET", `${biz(id)}/accounts`),
 
