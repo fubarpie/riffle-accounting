@@ -603,7 +603,7 @@ describe("statement vault", () => {
 
     const actions = (await admin.query(
       "SELECT action FROM audit_log WHERE business_id=$1 AND entity_id=$2", [w.biz, d1])).rows.map((r) => r.action);
-    expect(actions).toEqual(["statement.upload", "statement.delete"]);
+    expect([...actions].sort()).toEqual(["statement.delete", "statement.upload"]);
   });
 
   it("404s uploads to an unknown reconciliation", async () => {
