@@ -15,6 +15,7 @@
     "@fastify/multipart": "^9",
     "@fastify/static": "^10.1.6",
     "@riffle/db": "workspace:^",
+    "@riffle/extractor": "workspace:^",
     "@riffle/simplefin": "workspace:^",
     "fastify": "^5.2.1",
     "pg": "^8.13.1",

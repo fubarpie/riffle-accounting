@@ -33,7 +33,8 @@ const toDoc = (r: DocRow): StatementDocument => ({
 
 export interface NewStatementDocument {
   id: string;
-  reconciliationId: string;
+  /** null for a statement kept only for an AI extraction (Phase 5). */
+  reconciliationId: string | null;
   filename: string;
   contentType: StatementContentType;
   sizeBytes: number;
@@ -44,10 +45,12 @@ export interface NewStatementDocument {
 export async function insertStatementDocument(
   c: PoolClient, businessId: string, actor: string, d: NewStatementDocument,
 ): Promise<StatementDocument> {
-  const rec = await c.query<{ status: string }>(
-    'SELECT status FROM reconciliations WHERE business_id = $1 AND id = $2 FOR SHARE', [businessId, d.reconciliationId]);
-  if (!rec.rows[0]) throw new NotFoundError('reconciliation');
-  if (rec.rows[0].status === 'voided') throw new ReconciliationStateError('reconciliation is voided');
+  if (d.reconciliationId !== null) {
+    const rec = await c.query<{ status: string }>(
+      'SELECT status FROM reconciliations WHERE business_id = $1 AND id = $2 FOR SHARE', [businessId, d.reconciliationId]);
+    if (!rec.rows[0]) throw new NotFoundError('reconciliation');
+    if (rec.rows[0].status === 'voided') throw new ReconciliationStateError('reconciliation is voided');
+  }
   const { rows } = await c.query<DocRow>(
     `INSERT INTO statement_documents (id, business_id, reconciliation_id, filename, content_type, size_bytes, sha256, storage_key, uploaded_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING ${COLS}`,
