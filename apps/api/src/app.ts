@@ -17,6 +17,7 @@ import { extractionRoutes } from "./routes/extractions";
 import { importRoutes } from "./routes/imports";
 import { reconciliationRoutes } from "./routes/reconciliations";
 import { reportRoutes } from "./routes/reports";
+import { transactionRoutes } from "./routes/transactions";
 
 export interface AppOptions {
   /** Directory containing the built web UI. When absent, only the API is served. */
@@ -55,6 +56,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     await app.register(businessRoutes, { pool: options.pool });
     await app.register(ruleRoutes, { pool: options.pool });
     await app.register(reportRoutes, { pool: options.pool });
+    await app.register(transactionRoutes, { pool: options.pool });
     await app.register(reconciliationRoutes, { pool: options.pool, config });
     await app.register(extractionRoutes, { pool: options.pool, config });
     await app.register(importRoutes, { pool: options.pool, config });

@@ -136,3 +136,26 @@ export interface ImportApprovalResult {
   accountsCreated: number;
   alreadyImported: number;
 }
+
+export type TransactionKind = "deposit" | "withdrawal" | "transfer" | "journal";
+
+export interface TransactionRow {
+  id: string;
+  kind: TransactionKind;
+  date: string;
+  description: string;
+  notes: string;
+  voided: boolean;
+  /** Gross debit total in minor units; null for voided transactions. */
+  amountMinor: string | null;
+  /** Signed per-account amounts: debit positive, credit negative. */
+  accounts: Array<{ accountId: string; code: string | null; name: string; amountMinor: string }>;
+}
+
+export interface TransactionList {
+  currency: string;
+  total: number;
+  limit: number;
+  offset: number;
+  transactions: TransactionRow[];
+}

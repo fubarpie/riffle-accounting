@@ -5,6 +5,7 @@
  *   #/                      business list
  *   #/b/:id                 extractions of a business (upload + list)
  *   #/b/:id/dashboard       business dashboard
+ *   #/b/:id/transactions    searchable transaction list (filters live in the ?query part)
  *   #/b/:id/reports/:kind   one financial report
  *   #/b/:id/x/:eid          review one extraction
  *   #/b/:id/imports         Wave imports of a business (upload + list)
@@ -21,6 +22,7 @@ export function isReportKind(s: string | undefined): s is ReportKind {
 export type Route =
   | { name: "businesses" }
   | { name: "dashboard"; businessId: string }
+  | { name: "transactions"; businessId: string }
   | { name: "reports"; businessId: string; kind: ReportKind }
   | { name: "extractions"; businessId: string }
   | { name: "review"; businessId: string; extractionId: string }
@@ -37,6 +39,7 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === "b" && parts[1] !== undefined && UUID.test(parts[1])) {
     if (parts.length === 2) return { name: "extractions", businessId: parts[1] };
     if (parts[2] === "dashboard" && parts.length === 3) return { name: "dashboard", businessId: parts[1] };
+    if (parts[2] === "transactions" && parts.length === 3) return { name: "transactions", businessId: parts[1] };
     if (parts[2] === "reports") {
       if (parts.length === 3) return { name: "reports", businessId: parts[1], kind: "profit-loss" };
       if (parts.length === 4 && isReportKind(parts[3])) return { name: "reports", businessId: parts[1], kind: parts[3] };
@@ -56,6 +59,7 @@ export function parseRoute(hash: string): Route {
 export const hrefFor = {
   businesses: () => "#/",
   dashboard: (businessId: string) => `#/b/${businessId}/dashboard`,
+  transactions: (businessId: string) => `#/b/${businessId}/transactions`,
   reports: (businessId: string, kind: ReportKind) => `#/b/${businessId}/reports/${kind}`,
   extractions: (businessId: string) => `#/b/${businessId}`,
   review: (businessId: string, extractionId: string) => `#/b/${businessId}/x/${extractionId}`,

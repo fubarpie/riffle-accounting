@@ -5,6 +5,7 @@ export { migrate, setAppRolePassword } from './migrate.js';
 export { withTenant, type TenantContext } from './tenant.js';
 export { DEFAULT_CHART, seedDefaultChart, type ChartTemplateAccount } from './chart.js';
 export * from './ledger.js';
+export * from './transactions.js';
 export * from './auth.js';
 export * from './access.js';
 export * from './reports/index.js';
