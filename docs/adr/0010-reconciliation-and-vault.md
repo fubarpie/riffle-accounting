@@ -82,7 +82,7 @@ Authorisation happens before the request body is validated or an upload is read.
 
 `statement_documents` holds metadata; bytes live on disk under
 `STATEMENT_STORAGE_DIR` (default `./data/statements`; compose mounts the
-`riffle-statements` volume at `/data/statements`). File storage rather than
+`riffle-statements` volume at `/var/lib/riffle/statements`, deliberately not nested under the `/data` volume). File storage rather than
 `bytea` keeps the database small and backups simple, at the cost of backing up
 two things together.
 

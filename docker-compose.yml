@@ -51,7 +51,7 @@ services:
       RIFFLE_SECRET_KEY: ${RIFFLE_SECRET_KEY:-}
       BANK_IMPORT_MIN_INTERVAL_SECONDS: ${BANK_IMPORT_MIN_INTERVAL_SECONDS:-}
       # Statement vault: uploaded statements live on the riffle-statements volume.
-      STATEMENT_STORAGE_DIR: ${STATEMENT_STORAGE_DIR:-/data/statements}
+      STATEMENT_STORAGE_DIR: ${STATEMENT_STORAGE_DIR:-/var/lib/riffle/statements}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-}
       # AI statement upload (PDF text). Leave EXTRACTOR empty to disable; CSV needs none of these.
       EXTRACTOR: ${EXTRACTOR:-}
@@ -62,7 +62,7 @@ services:
       - "${RIFFLE_PORT:-3000}:3000"
     volumes:
       - riffle-data:/data
-      - riffle-statements:/data/statements
+      - riffle-statements:/var/lib/riffle/statements
 
   worker:
     image: ${RIFFLE_IMAGE:-ghcr.io/fubarpie/riffle-accounting:latest}

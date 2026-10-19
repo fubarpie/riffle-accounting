@@ -23,8 +23,10 @@ export COOKIE_SECURE=false
 
 compose() { docker compose -p "$PROJECT" -f docker-compose.yml "$@"; }
 
-cleanup() {
-  status=$?
+cleanup() { cleanup_with $?; }
+
+cleanup_with() {
+  status="$1"
   if [ "$status" -ne 0 ]; then
     echo "::group::compose logs (smoke test failed)"
     compose logs --no-color --tail=200 || true
@@ -55,7 +57,8 @@ curl --fail --silent --show-error --max-time 5 "http://127.0.0.1:${PORT}/some/cl
 
 echo "Checking sign-up, session and tenant API..."
 jar="$(mktemp)"
-trap 'rm -f "$jar"; cleanup' EXIT
+# Capture the exit status first: rm would otherwise reset $? to 0 before cleanup reads it.
+trap 'status=$?; rm -f "$jar"; cleanup_with "$status"' EXIT
 base="http://127.0.0.1:${PORT}"
 curl --fail --silent --show-error --max-time 10 -c "$jar" -H 'content-type: application/json' \
   -d '{"email":"smoke@example.test","name":"Smoke","password":"smoke-test-password"}' \
