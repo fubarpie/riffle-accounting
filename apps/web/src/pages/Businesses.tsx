@@ -39,8 +39,13 @@ export function Businesses() {
           <tbody>
             {data.businesses.map((b) => (
               <tr key={b.id}>
-                <td>{b.name}</td><td>{b.currency}</td><td>{b.role}</td>
-                <td><a href={hrefFor.extractions(b.id)}>Statement uploads</a></td>
+                <td><a href={hrefFor.dashboard(b.id)}>{b.name}</a></td><td>{b.currency}</td><td>{b.role}</td>
+                <td>
+                  <a href={hrefFor.dashboard(b.id)}>Dashboard</a>{" · "}
+                  <a href={hrefFor.reports(b.id, "profit-loss")}>Reports</a>{" · "}
+                  <a href={hrefFor.imports(b.id)}>Wave import</a>{" · "}
+                  <a href={hrefFor.extractions(b.id)}>Statement uploads</a>
+                </td>
               </tr>
             ))}
           </tbody>
