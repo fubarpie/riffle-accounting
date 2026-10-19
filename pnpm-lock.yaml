@@ -22,6 +22,9 @@ importers:
       '@riffle/db':
         specifier: workspace:^
         version: link:../../packages/db
+      '@riffle/extractor':
+        specifier: workspace:^
+        version: link:../../packages/extractor
       '@riffle/simplefin':
         specifier: workspace:^
         version: link:../../packages/simplefin
@@ -145,6 +148,25 @@ importers:
       fast-check:
         specifier: ^4.0.0
         version: 4.10.2
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.5
+        version: 3.2.7(@types/node@26.6.5)(lightningcss@1.33.0)(tsx@4.23.15)
+
+  packages/extractor:
+    dependencies:
+      unpdf:
+        specifier: ^1.9.0
+        version: 1.9.0
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -1800,6 +1822,15 @@ packages:
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
 
+  unpdf@1.9.0:
+    resolution: {integrity: sha512-YIXl+jZUBneP22IkRUwFA1b71l+Ad2uX7o7dMfxLSLuCOtaKAQvak7Sz3MtdVsWTsocblznSIGidfXyhnBgBMA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@napi-rs/canvas': ^0.1.69 || ^1.0.0
+    peerDependenciesMeta:
+      '@napi-rs/canvas':
+        optional: true
+
   update-browserslist-db@1.3.4:
     resolution: {integrity: sha512-t8wonIOdQyOjtPd2VktlBu6QjTVTks6v8bSi7kd0r2Vll8TK1JYDZtRRdbmCHOAMphkZgrzK+L+vXK4pyZ8t4A==}
     hasBin: true
@@ -3250,6 +3281,8 @@ snapshots:
   ufo@1.6.4: {}
 
   undici-types@8.9.0: {}
+
+  unpdf@1.9.0: {}
 
   update-browserslist-db@1.3.4(browserslist@4.29.3):
     dependencies:

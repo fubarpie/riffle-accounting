@@ -16,6 +16,7 @@ export const transactionKind = pgEnum('transaction_kind', ['deposit', 'withdrawa
 export const bankConnectionStatus = pgEnum('bank_connection_status', ['active', 'disabled', 'error']);
 export const stagedStatus = pgEnum('staged_status', ['new', 'approved', 'ignored', 'posted']);
 export const reconciliationStatus = pgEnum('reconciliation_status', ['draft', 'completed', 'voided']);
+export const extractionStatus = pgEnum('extraction_status', ['pending', 'staged', 'flagged', 'approved', 'rejected']);
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`);
 const updatedAt = () => timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`);
@@ -228,5 +229,44 @@ export const statementDocuments = pgTable('statement_documents', {
   sha256: char('sha256', { length: 64 }).notNull(),
   storageKey: text('storage_key').notNull(),
   uploadedBy: uuid('uploaded_by').notNull(),
+  createdAt: createdAt(),
+});
+
+export const statementExtractions = pgTable('statement_extractions', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  accountId: uuid('account_id').notNull(),
+  documentId: uuid('document_id'),
+  status: extractionStatus('status').notNull().default('pending'),
+  extractorName: text('extractor_name').notNull(),
+  extractorModel: text('extractor_model').notNull(),
+  periodStart: date('period_start').notNull(),
+  periodEnd: date('period_end').notNull(),
+  openingBalanceMinor: bigint('opening_balance_minor', { mode: 'bigint' }).notNull(),
+  closingBalanceMinor: bigint('closing_balance_minor', { mode: 'bigint' }).notNull(),
+  currency: text('currency'),
+  validation: jsonb('validation').notNull().default(sql`'{}'::jsonb`),
+  validationOk: boolean('validation_ok').notNull().default(false),
+  validatedAt: timestamp('validated_at', { withTimezone: true }),
+  createdBy: uuid('created_by').notNull(),
+  approvedBy: uuid('approved_by'),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  rejectedBy: uuid('rejected_by'),
+  rejectedAt: timestamp('rejected_at', { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const extractionLines = pgTable('extraction_lines', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  extractionId: uuid('extraction_id').notNull(),
+  lineNo: integer('line_no').notNull(),
+  lineDate: date('line_date').notNull(),
+  description: text('description').notNull().default(''),
+  amountMinor: bigint('amount_minor', { mode: 'bigint' }).notNull(),
+  amountInvalid: boolean('amount_invalid').notNull().default(false),
+  alreadyRecorded: boolean('already_recorded').notNull().default(false),
+  raw: jsonb('raw').notNull().default(sql`'{}'::jsonb`),
   createdAt: createdAt(),
 });

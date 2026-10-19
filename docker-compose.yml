@@ -53,6 +53,11 @@ services:
       # Statement vault: uploaded statements live on the riffle-statements volume.
       STATEMENT_STORAGE_DIR: ${STATEMENT_STORAGE_DIR:-/data/statements}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-}
+      # AI statement upload (PDF text). Leave EXTRACTOR empty to disable; CSV needs none of these.
+      EXTRACTOR: ${EXTRACTOR:-}
+      EXTRACTOR_BASE_URL: ${EXTRACTOR_BASE_URL:-}
+      EXTRACTOR_API_KEY: ${EXTRACTOR_API_KEY:-}
+      EXTRACTOR_MODEL: ${EXTRACTOR_MODEL:-}
     ports:
       - "${RIFFLE_PORT:-3000}:3000"
     volumes:

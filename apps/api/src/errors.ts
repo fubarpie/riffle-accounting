@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   BankInputError, BooksLockedError, ConnectionDisabledError, ForbiddenError, LedgerInputError,
+  ExtractionInputError, ExtractionStateError,
   NotAMemberError, NotFoundError as DbNotFoundError, ReconciliationInputError, ReconciliationStateError,
   RuleValidationError, StagedStateError,
 } from "@riffle/db";
+import { ExtractorError } from "@riffle/extractor";
 import {
   SimpleFinAccessRevokedError, SimpleFinClaimError, SimpleFinError, SimpleFinInputError,
   SimpleFinRateLimitedError, SimpleFinTokenError,
@@ -43,6 +45,13 @@ export function installErrorHandler(app: FastifyInstance): void {
     }
     if (err instanceof Unavailable) return reply.code(503).send({ error: err.message });
     if (err instanceof BankInputError) return reply.code(422).send({ error: err.message });
+    if (err instanceof ExtractionInputError) return reply.code(422).send({ error: err.message });
+    if (err instanceof ExtractionStateError) return reply.code(409).send({ error: err.message });
+    if (err instanceof ExtractorError) {
+      // Messages are written by the extractor package and never contain URLs, keys or statement text.
+      const status = err.code === "input" ? 422 : err.code === "not_configured" ? 503 : 502;
+      return reply.code(status).send({ error: err.message });
+    }
     if (err instanceof ReconciliationInputError) return reply.code(422).send({ error: err.message });
     if (err instanceof ReconciliationStateError) return reply.code(409).send({ error: err.message });
     if (err instanceof StagedStateError || err instanceof ConnectionDisabledError) {
