@@ -6,7 +6,7 @@ export function buildTextPdf(lines: string[]): Uint8Array {
   const objs = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100000 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
     `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
   ];

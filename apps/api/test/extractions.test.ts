@@ -351,7 +351,7 @@ describe("extractions: reject and final states", () => {
     const w = await world();
     const eid: string = (await uploadCsv(w)).json().extraction.id;
     await withTenant(pool, { userId: w.owner.id, businessId: w.biz }, (c) =>
-      c.query("UPDATE businesses SET lock_date = '2026-01-03' WHERE id = $1", [w.biz]));
+      c.query("UPDATE businesses SET books_locked_through = '2026-01-03' WHERE id = $1", [w.biz]));
     const res = await call(w.owner, "POST", `${w.base}/${eid}/approve`);
     expect(res.statusCode).toBe(409);
     expect(await ledgerLines(w)).toEqual({ count: 0, total: "0" }); // the 01-02 line did not post alone
@@ -415,7 +415,6 @@ describe("extractions: PDF text", () => {
   it("extracts a text PDF with the configured extractor and stages it", async () => {
     const w = await world();
     const res = await upload(w.owner, w.up(), "jan.pdf", "application/pdf", pdfOf(statementJson()));
-    console.log(res.body);
     expect(res.statusCode).toBe(201);
     expect(res.json().extraction).toMatchObject({ status: "staged", extractorName: "mock", extractorModel: "mock-1" });
     expect(res.json().lines).toHaveLength(2);
