@@ -2,7 +2,8 @@
 import { createHash } from "node:crypto";
 import fastifyMultipart from "@fastify/multipart";
 import {
-  IMPORT_WRITER_ROLES, approveBatch, getBatch, listBatches, listEntries, rejectBatch, setAccountMapping, setEntryExcluded,
+  IMPORT_WRITER_ROLES, approveBatch, autoMapImportAccounts, getBatch, listBatches, rejectBatch, searchImportEntries,
+  setAccountMapping, setEntryExcluded, setImportAccountsMapping, setImportEntriesExcluded,
   stageBatch, withMembership, type MembershipRole,
 } from "@riffle/db";
 import { CsvError, WaveFormatError, parseWaveJournal } from "@riffle/shared";
@@ -34,6 +35,7 @@ const listQuery = z.object({
 const entriesQuery = z.object({
   status: z.enum(["valid", "invalid", "skipped"]).optional(),
   excluded: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+  search: z.string().trim().max(200).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 }).strict();
@@ -46,6 +48,26 @@ const mappingBody = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("clear") }).strict(),
 ]);
 const excludeBody = z.object({ excluded: z.boolean() }).strict();
+
+/** Bulk map: only "an existing account" or "clear". Creating many accounts goes through auto-map. */
+const bulkMappingBody = z.object({
+  accountIds: z.array(z.uuid()).min(1).max(200),
+  decision: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("target"), accountId: z.uuid() }).strict(),
+    z.object({ kind: z.literal("clear") }).strict(),
+  ]),
+}).strict();
+const entryFilterBody = z.object({
+  status: z.enum(["valid", "invalid", "skipped"]).optional(),
+  excluded: z.boolean().optional(),
+  search: z.string().trim().max(200).optional(),
+}).strict();
+/** Exactly one of `ids` (the rows ticked) or `filter` (everything matching a view). */
+const bulkExcludeBody = z.object({
+  excluded: z.boolean(),
+  ids: z.array(z.uuid()).min(1).max(5000).optional(),
+  filter: entryFilterBody.optional(),
+}).strict().refine((b) => (b.ids === undefined) !== (b.filter === undefined), { message: "send either ids or filter, not both" });
 
 export async function importRoutes(
   app: FastifyInstance, opts: { pool: Pool; config: ApiConfig },
@@ -121,12 +143,13 @@ export async function importRoutes(
     return withMembership(pool, user.id, id, ALL_ROLES, (c) => getBatch(c, id, bid));
   });
 
+  // Entries, now with an optional text search and the total that matches (so the screen can offer "select all N").
   app.get(`${base}/:bid/entries`, async (request, reply) => {
     const user = requireUser(request, reply);
     if (!user) return reply;
     const { id, bid } = batchParams.parse(request.params);
     const q = entriesQuery.parse(request.query);
-    return withMembership(pool, user.id, id, ALL_ROLES, async (c) => ({ entries: await listEntries(c, id, bid, q) }));
+    return withMembership(pool, user.id, id, ALL_ROLES, (c) => searchImportEntries(c, id, bid, q));
   });
 
   app.put(`${base}/:bid/accounts/:aid/mapping`, async (request, reply) => {
@@ -139,6 +162,25 @@ export async function importRoutes(
     });
   });
 
+  // Decide every undecided account at once: match an existing one or queue a new one. Nothing is created until approval.
+  app.post(`${base}/:bid/accounts/auto-map`, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return reply;
+    const { id, bid } = batchParams.parse(request.params);
+    return withMembership(pool, user.id, id, IMPORT_WRITER_ROLES, (c) => autoMapImportAccounts(c, id, user.id, bid));
+  });
+
+  // Map or clear several accounts together. All or none.
+  app.post(`${base}/:bid/accounts/mapping`, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return reply;
+    const { id, bid } = batchParams.parse(request.params);
+    return withMembership(pool, user.id, id, IMPORT_WRITER_ROLES, async (c) => {
+      const body = bulkMappingBody.parse(request.body);
+      return setImportAccountsMapping(c, id, user.id, bid, body.accountIds, body.decision);
+    });
+  });
+
   app.patch(`${base}/:bid/entries/:eid`, async (request, reply) => {
     const user = requireUser(request, reply);
     if (!user) return reply;
@@ -146,6 +188,18 @@ export async function importRoutes(
     return withMembership(pool, user.id, id, IMPORT_WRITER_ROLES, async (c) => {
       const body = excludeBody.parse(request.body);
       return setEntryExcluded(c, id, user.id, bid, eid, body.excluded);
+    });
+  });
+
+  // Exclude or include many entries: the ticked ids, or everything matching a filter.
+  app.post(`${base}/:bid/entries/exclude`, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return reply;
+    const { id, bid } = batchParams.parse(request.params);
+    return withMembership(pool, user.id, id, IMPORT_WRITER_ROLES, async (c) => {
+      const body = bulkExcludeBody.parse(request.body);
+      const target = body.ids ? { ids: body.ids } : { filter: body.filter ?? {} };
+      return setImportEntriesExcluded(c, id, user.id, bid, target, body.excluded);
     });
   });
 
