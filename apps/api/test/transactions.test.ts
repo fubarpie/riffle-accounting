@@ -156,10 +156,15 @@ describe.skipIf(!hasPg)("transactions list route", () => {
     expect(descs(await list(owner, biz, "?sort=date&dir=asc"))[0]).toBe("Contribution");
     expect(descs(await list(owner, biz, "?sort=amount&dir=desc")).slice(0, 2)).toEqual(["Contribution", "Invoice 100"]);
     expect(descs(await list(owner, biz, "?sort=amount&dir=asc"))[0]).toBe("Promo 50% off");
-    expect(descs(await list(owner, biz, "?sort=description&dir=asc"))).toEqual([
-      "Contribution", "Invoice 100", "Promo 50% off", "Promo 500 off", "Rent, February",
-    ]);
-    expect(descs(await list(owner, biz, "?sort=description&dir=desc"))[0]).toBe("Rent, February");
+    // Description order follows the database collation, which differs between Postgres installs
+    // (how "%" sorts against "0"). Assert only the order that holds under any collation.
+    const asc = descs(await list(owner, biz, "?sort=description&dir=asc"));
+    expect(asc).toHaveLength(5);
+    expect(asc.slice(0, 2)).toEqual(["Contribution", "Invoice 100"]);
+    expect(asc[4]).toBe("Rent, February");
+    expect([...asc.slice(2, 4)].sort()).toEqual(["Promo 50% off", "Promo 500 off"].sort());
+    const desc = descs(await list(owner, biz, "?sort=description&dir=desc"));
+    expect(desc).toEqual([...asc].reverse());
   });
 
   it("pages without gaps or repeats, and reports the full total", async () => {
