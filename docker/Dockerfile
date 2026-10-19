@@ -86,8 +86,8 @@ COPY LICENSE NOTICE ./
 COPY docker/entrypoint.sh /usr/local/bin/riffle-entrypoint
 
 RUN chmod 0755 /usr/local/bin/riffle-entrypoint \
-    && mkdir -p /data/statements \
-    && chown -R node:node /data
+    && mkdir -p /data /var/lib/riffle/statements \
+    && chown -R node:node /data /var/lib/riffle
 
 USER node
 VOLUME ["/data"]
