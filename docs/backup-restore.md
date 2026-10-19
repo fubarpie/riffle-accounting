@@ -8,11 +8,20 @@
 > 1. **Volume name.** `riffle_riffle-statements` assumes the default Compose project name `riffle`.
 >    Confirm with `docker volume ls` before running the vault commands.
 > 2. **Restore order.** The step that starts the API once to create the schema and the
->    `riffle_app` role before `pg_restore` is unverified.
-> 3. **Row-level security.** It is not yet confirmed that the RLS policies and grants survive
->    `pg_restore --clean --no-owner`. A restore that loses them could leave a database with **no
->    tenant isolation**. After any restore, verify isolation as the `riffle_app` role before
->    putting the system back in use.
+>    `riffle_app` role before `pg_restore` is unverified. A dump of one database does **not**
+>    contain roles, so on a fresh machine `riffle_app` does not exist until something creates it;
+>    do not skip that step.
+> 3. **Row-level security.** Partly checked, not confirmed. A trial on a **stand-in schema** (plain
+>    PostgreSQL, not the real Riffle schema and not Docker) found that RLS policies and
+>    `FORCE ROW LEVEL SECURITY` survive `pg_dump -Fc` / `pg_restore`, and tenant isolation held for
+>    a restricted role. The same trial found that **`--no-privileges` drops the grants**: the app
+>    role then cannot read anything. That fails closed (a lock-out, not a leak), but it is still a
+>    broken restore. **Do not add `--no-privileges`.** The exact command below
+>    (`--clean --if-exists --no-owner`) has not been run against the real schema. After any
+>    restore, verify isolation as the `riffle_app` role before putting the system back in use.
+>
+> To run the full rehearsal on a throwaway machine, use `bash scripts/restore-test.sh`
+> (itself not yet run; see the header of that script).
 >
 > A wrong restore can overwrite existing data. Only restore onto a stack you are willing to lose.
 
