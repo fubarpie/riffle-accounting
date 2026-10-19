@@ -15,4 +15,4 @@ Users want to turn a bank statement (CSV or text-layer PDF) into staged transact
 
 ## Consequences
 - No data leaves the server unless an operator configures an extractor endpoint.
-- The web approval UI is a follow-up; the API is complete.
+- The web approval UI lives in `apps/web` (hash-routed React): upload, list, and a review screen to correct lines, re-check, approve or reject. It shows a live balance preview while editing, but the server's gate is the only authority.
