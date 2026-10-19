@@ -71,3 +71,68 @@ export interface UploadParams {
   openingBalance?: string;
   closingBalance?: string;
 }
+
+// ------------------------------------------------------------- Wave imports
+/** Response shapes of apps/api/src/routes/imports.ts. Dates are ISO strings; amounts are decimal strings of minor units. */
+export type AccountType = "asset" | "liability" | "equity" | "income" | "expense";
+export type ImportBatchStatus = "staged" | "approved" | "rejected";
+
+export interface ImportBatch {
+  id: string;
+  source: string;
+  fileSha256: string;
+  status: ImportBatchStatus;
+  summary: Record<string, unknown>;
+  createdBy: string;
+  createdAt: string;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+}
+export interface ImportCounts { entries: number; valid: number; invalid: number; skipped: number; excluded: number }
+export interface ImportReadiness { invalidEntries: number; unmappedAccounts: number; ready: boolean }
+export interface ImportAccount {
+  id: string;
+  sourceName: string;
+  sourceGroup: string;
+  sourceType: string;
+  accountRefLast4: string | null;
+  targetAccountId: string | null;
+  createName: string | null;
+  createType: AccountType | null;
+  lineCount: number;
+}
+export interface ImportBatchDetail { batch: ImportBatch; counts: ImportCounts; blockers: ImportReadiness; accounts: ImportAccount[] }
+export interface ImportIssue { severity: "error" | "warning"; code: string; message: string; row?: number }
+export interface ImportEntryLine { lineNo: number; importAccountId: string; amountMinor: string; memo: string }
+export interface ImportEntry {
+  id: string;
+  externalId: string;
+  date: string | null;
+  description: string;
+  status: "valid" | "invalid" | "skipped";
+  issues: ImportIssue[];
+  excluded: boolean;
+  transactionId: string | null;
+  lines: ImportEntryLine[];
+}
+export type MappingDecision =
+  | { kind: "target"; accountId: string }
+  | { kind: "create"; name: string; type: AccountType }
+  | { kind: "clear" };
+
+/** Body of a 409 refusal to approve: every reason at once. */
+export interface ApprovalBlockers {
+  invalidEntries: number;
+  unmappedAccounts: { importAccountId: string; sourceName: string }[];
+  archivedTargets: { importAccountId: string; sourceName: string }[];
+  classMismatches: { importAccountId: string; sourceName: string; sourceGroup: string; expected: AccountType; actual: AccountType }[];
+  lockedEntries: { count: number; lockedThrough: string; earliest: string } | null;
+  nothingToPost: boolean;
+}
+export interface ImportApprovalResult {
+  batch: ImportBatch;
+  counts: ImportCounts;
+  posted: number;
+  accountsCreated: number;
+  alreadyImported: number;
+}

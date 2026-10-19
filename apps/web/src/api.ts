@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type {
-  Account, ApproveResult, BusinessSummary, ExtractionDetail, ExtractionStatus, Extraction, PatchBody, UploadParams, User,
+  Account, ApprovalBlockers, ApproveResult, BusinessSummary, ExtractionDetail, ExtractionStatus, Extraction, ImportApprovalResult,
+  ImportBatch, ImportBatchDetail, ImportBatchStatus, ImportEntry, ImportCounts, ImportReadiness, MappingDecision, PatchBody,
+  UploadParams, User, ImportAccount,
 } from "./types";
 
 /** A non-2xx answer. `body` keeps the parsed payload: a refused approval (422) still carries the refreshed extraction. */
@@ -61,6 +63,7 @@ export function createClient(fetchFn: FetchFn) {
   }
 
   const biz = (id: string) => `/api/businesses/${encodeURIComponent(id)}`;
+  const imp = (id: string, bid: string) => `${biz(id)}/imports/${encodeURIComponent(bid)}`;
   const ext = (id: string, eid: string) => `${biz(id)}/extractions/${encodeURIComponent(eid)}`;
 
   return {
@@ -86,6 +89,24 @@ export function createClient(fetchFn: FetchFn) {
     revalidate: (id: string, eid: string) => request<ExtractionDetail>("POST", `${ext(id, eid)}/revalidate`, { json: {} }),
     approve: (id: string, eid: string) => request<ApproveResult>("POST", `${ext(id, eid)}/approve`, { json: {} }),
     reject: (id: string, eid: string) => request<ExtractionDetail & { alreadyRejected: boolean }>("POST", `${ext(id, eid)}/reject`, { json: {} }),
+
+    listImports: (id: string, filter: { status?: ImportBatchStatus } = {}) =>
+      request<{ batches: ImportBatch[] }>("GET", `${biz(id)}/imports`, { query: { ...filter, limit: 200 } }),
+    getImport: (id: string, bid: string) => request<ImportBatchDetail>("GET", imp(id, bid)),
+    importEntries: (id: string, bid: string, filter: { status?: ImportEntry["status"]; excluded?: boolean; limit?: number; offset?: number } = {}) =>
+      request<{ entries: ImportEntry[] }>("GET", `${imp(id, bid)}/entries`, { query: { ...filter, excluded: filter.excluded === undefined ? undefined : String(filter.excluded) } }),
+    uploadImport: (id: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      return request<ImportBatchDetail>("POST", `${biz(id)}/imports`, { query: { source: "wave_journal" }, form });
+    },
+    setImportMapping: (id: string, bid: string, aid: string, decision: MappingDecision) =>
+      request<{ account: ImportAccount }>("PUT", `${imp(id, bid)}/accounts/${encodeURIComponent(aid)}/mapping`, { json: decision }),
+    setImportEntryExcluded: (id: string, bid: string, eid: string, excluded: boolean) =>
+      request<{ entryId: string; excluded: boolean; counts: ImportCounts; blockers: ImportReadiness }>(
+        "PATCH", `${imp(id, bid)}/entries/${encodeURIComponent(eid)}`, { json: { excluded } }),
+    approveImport: (id: string, bid: string) => request<ImportApprovalResult>("POST", `${imp(id, bid)}/approve`, { json: {} }),
+    rejectImport: (id: string, bid: string) => request<unknown>("POST", `${imp(id, bid)}/reject`, { json: {} }),
   };
 }
 
@@ -105,4 +126,12 @@ export function describeError(err: unknown): string {
   if (err instanceof ApiError) return err.message;
   if (err instanceof TypeError) return "Cannot reach the server. Check your connection and try again.";
   return err instanceof Error ? err.message : "Something went wrong.";
+}
+
+/** The full blocker report the API attaches to a refused import approval (409), if present. */
+export function blockersFromError(err: unknown): ApprovalBlockers | undefined {
+  if (!(err instanceof ApiError) || err.status !== 409 || !err.body || typeof err.body !== "object") return undefined;
+  const b = (err.body as { blockers?: Partial<ApprovalBlockers> }).blockers;
+  if (!b || typeof b.invalidEntries !== "number" || !Array.isArray(b.unmappedAccounts) || !Array.isArray(b.classMismatches)) return undefined;
+  return { archivedTargets: [], lockedEntries: null, nothingToPost: false, ...b } as ApprovalBlockers;
 }

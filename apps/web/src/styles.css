@@ -37,3 +37,6 @@ td.narrow input { width: auto; }
 .muted { color: var(--muted); }
 .actions { display: flex; gap: .6rem; margin: 1rem 0; flex-wrap: wrap; }
 tr.problem td { background: color-mix(in srgb, var(--bad) 8%, transparent); }
+
+.badge.valid { color: var(--ok); } .badge.invalid { color: var(--bad); } .badge.skipped { color: var(--muted); }
+.msg.ok { color: var(--ok); }

@@ -61,6 +61,7 @@ export function Extractions({ businessId }: { businessId: string }) {
     <>
       <p><a href={hrefFor.businesses()}>← Businesses</a></p>
       <h1>Statement uploads{business.data ? ` — ${business.data.business.name}` : ""}</h1>
+      <p><a href={hrefFor.imports(businessId)}>Import a Wave journal export →</a></p>
       {business.error && <p className="msg error" role="alert">{business.error}</p>}
 
       {isWriter(role) && (
