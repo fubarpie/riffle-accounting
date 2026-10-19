@@ -5,6 +5,8 @@ import { ApiError, api, describeError } from "./api";
 import { SessionContext, useRoute, type Session } from "./hooks";
 import { Businesses } from "./pages/Businesses";
 import { Extractions } from "./pages/Extractions";
+import { ImportReview } from "./pages/ImportReview";
+import { Imports } from "./pages/Imports";
 import { Login } from "./pages/Login";
 import { Review } from "./pages/Review";
 import { hrefFor } from "./router";
@@ -51,6 +53,8 @@ export function App() {
   else if (auth.kind === "anon") body = <Login onSignedIn={(user) => setAuth({ kind: "user", user })} />;
   else if (route.name === "businesses") body = <Businesses />;
   else if (route.name === "extractions") body = <Extractions key={route.businessId} businessId={route.businessId} />;
+  else if (route.name === "imports") body = <Imports key={route.businessId} businessId={route.businessId} />;
+  else if (route.name === "import-review") body = <ImportReview key={route.batchId} businessId={route.businessId} batchId={route.batchId} />;
   else if (route.name === "review") body = <Review key={route.extractionId} businessId={route.businessId} extractionId={route.extractionId} />;
   else body = <p>Page not found. <a href={hrefFor.businesses()}>Back to businesses</a></p>;
 
