@@ -18,6 +18,7 @@ const current = (on: boolean) => (on ? { "aria-current": "page" as const } : {})
 /** Simple stroke icons drawn for this app (24x24 grid). */
 const ICONS = {
   dashboard: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
+  transactions: "M4 7h16M4 12h16M4 17h10",
   reports: "M5 20V10M12 20V4M19 20v-7",
   upload: "M12 16V4m0 0L8 8m4-4l4 4M4 20h16",
   download: "M12 4v12m0 0l-4-4m4 4l4-4M4 20h16",
@@ -44,6 +45,7 @@ export function BusinessLayout({ businessId, route, children }: { businessId: st
           <p className="biz-name">{name}</p>
         </div>
         <a href={hrefFor.dashboard(businessId)} {...current(route.name === "dashboard")}><Icon name="dashboard" />Dashboard</a>
+        <a href={hrefFor.transactions(businessId)} {...current(route.name === "transactions")}><Icon name="transactions" />Transactions</a>
         <h3>Reports</h3>
         {REPORT_KINDS.map((k) => (
           <a key={k} className="sub" href={hrefFor.reports(businessId, k)} {...current(route.name === "reports" && route.kind === k)}>{REPORT_LABELS[k]}</a>

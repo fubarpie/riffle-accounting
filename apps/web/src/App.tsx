@@ -12,6 +12,7 @@ import { Imports } from "./pages/Imports";
 import { Login } from "./pages/Login";
 import { Reports } from "./pages/Reports";
 import { Review } from "./pages/Review";
+import { Transactions } from "./pages/Transactions";
 import { hrefFor } from "./router";
 import type { User } from "./types";
 
@@ -56,6 +57,7 @@ export function App() {
   else if (auth.kind === "anon") body = <Login onSignedIn={(user) => setAuth({ kind: "user", user })} />;
   else if (route.name === "businesses") body = <Businesses />;
   else if (route.name === "dashboard") body = <Dashboard key={route.businessId} businessId={route.businessId} />;
+  else if (route.name === "transactions") body = <Transactions key={route.businessId} businessId={route.businessId} />;
   else if (route.name === "reports") body = <Reports key={`${route.businessId}:${route.kind}`} businessId={route.businessId} kind={route.kind} />;
   else if (route.name === "extractions") body = <Extractions key={route.businessId} businessId={route.businessId} />;
   else if (route.name === "imports") body = <Imports key={route.businessId} businessId={route.businessId} />;
