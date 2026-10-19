@@ -1,46 +1,76 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { APP_NAME, type HealthResponse, SOURCE_URL } from "@riffle/shared";
-import { useEffect, useState } from "react";
+import { APP_NAME, SOURCE_URL } from "@riffle/shared";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ApiError, api, describeError } from "./api";
+import { SessionContext, useRoute, type Session } from "./hooks";
+import { Businesses } from "./pages/Businesses";
+import { Extractions } from "./pages/Extractions";
+import { Login } from "./pages/Login";
+import { Review } from "./pages/Review";
+import { hrefFor } from "./router";
+import type { User } from "./types";
 
-type State =
+type Auth =
   | { kind: "loading" }
-  | { kind: "ok"; health: HealthResponse }
-  | { kind: "error"; message: string };
+  | { kind: "anon" }
+  | { kind: "error"; message: string }
+  | { kind: "user"; user: User };
 
 export function App() {
-  const [state, setState] = useState<State>({ kind: "loading" });
+  const [auth, setAuth] = useState<Auth>({ kind: "loading" });
+  const route = useRoute();
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch("/healthz", { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<HealthResponse>;
-      })
-      .then((health) => setState({ kind: "ok", health }))
-      .catch((err: unknown) => {
-        if (controller.signal.aborted) return;
-        setState({ kind: "error", message: err instanceof Error ? err.message : String(err) });
-      });
-    return () => controller.abort();
+    api.me().then(
+      ({ user }) => setAuth({ kind: "user", user }),
+      (err: unknown) => setAuth(err instanceof ApiError && err.status === 401 ? { kind: "anon" } : { kind: "error", message: describeError(err) }),
+    );
   }, []);
 
+  const describe = useCallback((err: unknown): string => {
+    if (err instanceof ApiError && err.status === 401) {
+      setAuth({ kind: "anon" });
+      return "Your session expired. Sign in again.";
+    }
+    return describeError(err);
+  }, []);
+
+  const session = useMemo<Session | null>(() => (auth.kind === "user" ? { user: auth.user, describe } : null), [auth, describe]);
+
+  const signOut = async () => {
+    try {
+      await api.logout();
+    } finally {
+      setAuth({ kind: "anon" });
+    }
+  };
+
+  let body;
+  if (auth.kind === "loading") body = <p className="muted">Loading…</p>;
+  else if (auth.kind === "error") body = <p className="msg error" role="alert">{auth.message}</p>;
+  else if (auth.kind === "anon") body = <Login onSignedIn={(user) => setAuth({ kind: "user", user })} />;
+  else if (route.name === "businesses") body = <Businesses />;
+  else if (route.name === "extractions") body = <Extractions key={route.businessId} businessId={route.businessId} />;
+  else if (route.name === "review") body = <Review key={route.extractionId} businessId={route.businessId} extractionId={route.extractionId} />;
+  else body = <p>Page not found. <a href={hrefFor.businesses()}>Back to businesses</a></p>;
+
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 640, margin: "4rem auto", padding: "0 1rem" }}>
-      <h1>{APP_NAME}</h1>
-      <p>Free and open source small business bookkeeping.</p>
-      <p data-testid="api-status">
-        API status:{" "}
-        {state.kind === "loading" && "checking..."}
-        {state.kind === "ok" && `${state.health.status} (version ${state.health.version})`}
-        {state.kind === "error" && `unreachable (${state.message})`}
-      </p>
-      <footer style={{ marginTop: "3rem", fontSize: "0.85rem", color: "#555" }}>
+    <>
+      <header className="top">
+        <a className="brand" href={hrefFor.businesses()}>{APP_NAME}</a>
+        <span className="spacer" />
+        {session && (
+          <>
+            <span className="muted">{session.user.name}</span>
+            <button type="button" onClick={() => void signOut()}>Sign out</button>
+          </>
+        )}
+      </header>
+      <main>{session ? <SessionContext.Provider value={session}>{body}</SessionContext.Provider> : body}</main>
+      <footer>
         {APP_NAME} is licensed under the AGPL-3.0-or-later. No warranty.{" "}
-        <a href={SOURCE_URL} target="_blank" rel="noreferrer">
-          Source code
-        </a>
+        <a href={SOURCE_URL} target="_blank" rel="noreferrer">Source code</a>
       </footer>
-    </main>
+    </>
   );
 }
