@@ -12,6 +12,10 @@ export interface ApiConfig {
   keyring?: Keyring | undefined;
   /** Minimum gap between manual imports of one connection. Default 1 hour (SimpleFIN allows ~24 requests/day). */
   bankImportMinIntervalMs?: number | undefined;
+  /** Directory for the statement vault (STATEMENT_STORAGE_DIR). Must be a persistent, private volume. */
+  statementStorageDir?: string | undefined;
+  /** Largest accepted statement upload in bytes (MAX_UPLOAD_BYTES). Default 10 MiB. */
+  maxUploadBytes?: number | undefined;
 }
 
 const positive = (v: string | undefined): number | undefined => {
@@ -28,6 +32,8 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     trustedOrigins: (env["TRUSTED_ORIGINS"] ?? "").split(",").map((s) => s.trim()).filter(Boolean),
     // A malformed key ring fails startup loudly; an absent one only disables bank import.
     ...(env["RIFFLE_SECRET_KEY"] && { keyring: parseKeyring(env["RIFFLE_SECRET_KEY"]) }),
+    ...(env["STATEMENT_STORAGE_DIR"] && { statementStorageDir: env["STATEMENT_STORAGE_DIR"] }),
+    ...(positive(env["MAX_UPLOAD_BYTES"]) && { maxUploadBytes: positive(env["MAX_UPLOAD_BYTES"])! }),
     ...(positive(env["BANK_IMPORT_MIN_INTERVAL_SECONDS"]) && {
       bankImportMinIntervalMs: positive(env["BANK_IMPORT_MIN_INTERVAL_SECONDS"])! * 1000,
     }),

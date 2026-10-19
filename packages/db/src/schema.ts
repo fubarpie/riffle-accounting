@@ -15,6 +15,7 @@ export const accountType = pgEnum('account_type', ['asset', 'liability', 'equity
 export const transactionKind = pgEnum('transaction_kind', ['deposit', 'withdrawal', 'transfer', 'journal']);
 export const bankConnectionStatus = pgEnum('bank_connection_status', ['active', 'disabled', 'error']);
 export const stagedStatus = pgEnum('staged_status', ['new', 'approved', 'ignored', 'posted']);
+export const reconciliationStatus = pgEnum('reconciliation_status', ['draft', 'completed', 'voided']);
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`);
 const updatedAt = () => timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`);
@@ -187,4 +188,45 @@ export const stagedTransactions = pgTable('staged_transactions', {
   createdBy: uuid('created_by').notNull(),
   importedAt: timestamp('imported_at', { withTimezone: true }).notNull().default(sql`now()`),
   updatedAt: updatedAt(),
+});
+
+export const reconciliations = pgTable('reconciliations', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  accountId: uuid('account_id').notNull(),
+  statementStart: date('statement_start').notNull(),
+  statementEnd: date('statement_end').notNull(),
+  openingBalanceMinor: bigint('opening_balance_minor', { mode: 'bigint' }).notNull(),
+  closingBalanceMinor: bigint('closing_balance_minor', { mode: 'bigint' }).notNull(),
+  status: reconciliationStatus('status').notNull().default('draft'),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  completedBy: uuid('completed_by'),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+  voidedBy: uuid('voided_by'),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const reconciliationItems = pgTable('reconciliation_items', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  reconciliationId: uuid('reconciliation_id').notNull(),
+  lineId: uuid('line_id').notNull(),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+});
+
+export const statementDocuments = pgTable('statement_documents', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  reconciliationId: uuid('reconciliation_id'),
+  filename: text('filename').notNull(),
+  contentType: text('content_type').notNull(),
+  sizeBytes: bigint('size_bytes', { mode: 'bigint' }).notNull(),
+  sha256: char('sha256', { length: 64 }).notNull(),
+  storageKey: text('storage_key').notNull(),
+  uploadedBy: uuid('uploaded_by').notNull(),
+  createdAt: createdAt(),
 });
