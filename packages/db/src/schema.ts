@@ -17,6 +17,8 @@ export const bankConnectionStatus = pgEnum('bank_connection_status', ['active', 
 export const stagedStatus = pgEnum('staged_status', ['new', 'approved', 'ignored', 'posted']);
 export const reconciliationStatus = pgEnum('reconciliation_status', ['draft', 'completed', 'voided']);
 export const extractionStatus = pgEnum('extraction_status', ['pending', 'staged', 'flagged', 'approved', 'rejected']);
+export const importBatchStatus = pgEnum('import_batch_status', ['staged', 'approved', 'rejected']);
+export const importEntryStatus = pgEnum('import_entry_status', ['valid', 'invalid', 'skipped']);
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`);
 const updatedAt = () => timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`);
@@ -268,5 +270,72 @@ export const extractionLines = pgTable('extraction_lines', {
   amountInvalid: boolean('amount_invalid').notNull().default(false),
   alreadyRecorded: boolean('already_recorded').notNull().default(false),
   raw: jsonb('raw').notNull().default(sql`'{}'::jsonb`),
+  createdAt: createdAt(),
+});
+
+export const importBatches = pgTable('import_batches', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  source: text('source').notNull(),
+  fileSha256: char('file_sha256', { length: 64 }).notNull(),
+  status: importBatchStatus('status').notNull().default('staged'),
+  summary: jsonb('summary').notNull().default(sql`'{}'::jsonb`),
+  createdBy: uuid('created_by').notNull(),
+  approvedBy: uuid('approved_by'),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  rejectedBy: uuid('rejected_by'),
+  rejectedAt: timestamp('rejected_at', { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const importAccounts = pgTable('import_accounts', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  batchId: uuid('batch_id').notNull(),
+  sourceName: text('source_name').notNull(),
+  matchKey: text('match_key').notNull(),
+  sourceGroup: text('source_group').notNull().default(''),
+  sourceType: text('source_type').notNull().default(''),
+  accountRefLast4: text('account_ref_last4'),
+  targetAccountId: uuid('target_account_id'),
+  createName: text('create_name'),
+  createType: accountType('create_type'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const importEntries = pgTable('import_entries', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  batchId: uuid('batch_id').notNull(),
+  externalId: text('external_id').notNull(),
+  entryDate: date('entry_date'),
+  description: text('description').notNull().default(''),
+  status: importEntryStatus('status').notNull(),
+  issues: jsonb('issues').notNull().default(sql`'[]'::jsonb`),
+  excluded: boolean('excluded').notNull().default(false),
+  transactionId: uuid('transaction_id'),
+  createdAt: createdAt(),
+});
+
+export const importEntryLines = pgTable('import_entry_lines', {
+  id: uuid('id').primaryKey(),
+  businessId: uuid('business_id').notNull(),
+  batchId: uuid('batch_id').notNull(),
+  entryId: uuid('entry_id').notNull(),
+  lineNo: integer('line_no').notNull(),
+  importAccountId: uuid('import_account_id').notNull(),
+  amountMinor: bigint('amount_minor', { mode: 'bigint' }).notNull(),
+  memo: text('memo').notNull().default(''),
+  createdAt: createdAt(),
+});
+
+export const importedRefs = pgTable('imported_refs', {
+  businessId: uuid('business_id').notNull(),
+  source: text('source').notNull(),
+  externalId: text('external_id').notNull(),
+  transactionId: uuid('transaction_id').notNull(),
+  batchId: uuid('batch_id').notNull(),
   createdAt: createdAt(),
 });
