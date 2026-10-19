@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import fastifyMultipart from "@fastify/multipart";
 import {
-  IMPORT_WRITER_ROLES, getBatch, listBatches, listEntries, rejectBatch, setAccountMapping, setEntryExcluded,
+  IMPORT_WRITER_ROLES, approveBatch, getBatch, listBatches, listEntries, rejectBatch, setAccountMapping, setEntryExcluded,
   stageBatch, withMembership, type MembershipRole,
 } from "@riffle/db";
 import { CsvError, WaveFormatError, parseWaveJournal } from "@riffle/shared";
@@ -147,6 +147,13 @@ export async function importRoutes(
       const body = excludeBody.parse(request.body);
       return setEntryExcluded(c, id, user.id, bid, eid, body.excluded);
     });
+  });
+
+  app.post(`${base}/:bid/approve`, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return reply;
+    const { id, bid } = batchParams.parse(request.params);
+    return withMembership(pool, user.id, id, IMPORT_WRITER_ROLES, (c) => approveBatch(c, id, user.id, bid));
   });
 
   app.post(`${base}/:bid/reject`, async (request, reply) => {
