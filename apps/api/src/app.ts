@@ -14,6 +14,7 @@ import { bankRoutes } from "./routes/bank";
 import { businessRoutes } from "./routes/businesses";
 import { ruleRoutes } from "./routes/rules";
 import { extractionRoutes } from "./routes/extractions";
+import { importRoutes } from "./routes/imports";
 import { reconciliationRoutes } from "./routes/reconciliations";
 import { reportRoutes } from "./routes/reports";
 
@@ -56,6 +57,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     await app.register(reportRoutes, { pool: options.pool });
     await app.register(reconciliationRoutes, { pool: options.pool, config });
     await app.register(extractionRoutes, { pool: options.pool, config });
+    await app.register(importRoutes, { pool: options.pool, config });
     await app.register(bankRoutes, { pool: options.pool, config, fetchImpl: options.simplefinFetch ?? fetch });
   }
 
