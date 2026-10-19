@@ -40,4 +40,14 @@ export function isoDate(d: Date): string {
 
 export const todayIso = (): string => isoDate(new Date());
 export const yearStartIso = (): string => `${new Date().getFullYear()}-01-01`;
-export const isIsoDate = (s: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
+
+/** A real calendar date in YYYY-MM-DD form. Round-trips through UTC so 2025-02-30 is rejected whatever the JS engine's lenient parsing does. */
+export function isIsoDate(s: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const t = new Date(Date.UTC(y, mo - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;
+}
