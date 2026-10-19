@@ -42,3 +42,31 @@ Observed format traps the importer must handle:
 - The importer is deterministic and needs no model.
 - Large files (thousands of lines) must be parsed in a streaming way and staged in batches.
 - Backup/restore docs and the security review follow this work and cover the new staging tables.
+
+## Approval (decided with the owner; defaults, open to change)
+
+Approval posts every valid, non-excluded entry of a staged batch through the
+normal ledger path in one transaction (`POST /api/businesses/:id/imports/:bid/approve`,
+owner/admin/bookkeeper). All checks run before the first write, so a batch posts
+completely or not at all.
+
+1. **Source class is kept.** The source account class ("Account Group" in a Wave
+   journal) is stored on each staged account (`import_accounts.source_group`).
+   No schema change was needed.
+2. **Class must match.** An account may only be mapped to, or created as, the
+   ledger type its source class implies (Asset→asset, Liability→liability,
+   Equity→equity, Income→income, Expense→expense). A mismatch is refused when
+   mapping (422) and blocks approval (409); it is never coerced. A blank or
+   unrecognised class is not judged.
+3. **Locked periods block the whole batch.** If any entry to be posted is dated
+   on or before `books_locked_through`, approval is refused and the response
+   names the count and the earliest date. Nothing is posted silently and nothing
+   is excluded automatically: the reviewer excludes those entries or moves the
+   lock date, then approves.
+
+Other behaviour: accounts chosen as "create" are created at approval time in the
+business currency and the staged account is re-pointed at them; every posted
+entry is a `journal` transaction whose notes carry the source and its entry id;
+entries another import has already posted are skipped (staging pre-excludes
+them; approval re-checks in case two files were staged before either was
+approved); a second approval is a 409.

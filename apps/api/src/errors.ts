@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   BankInputError, BooksLockedError, ConnectionDisabledError, ForbiddenError, LedgerInputError,
-  ExtractionInputError, ExtractionStateError, ImportInputError, ImportStateError,
+  ExtractionInputError, ExtractionStateError, ImportApprovalBlockedError, ImportInputError, ImportStateError,
   NotAMemberError, NotFoundError as DbNotFoundError, ReconciliationInputError, ReconciliationStateError,
   RuleValidationError, StagedStateError,
 } from "@riffle/db";
@@ -47,6 +47,7 @@ export function installErrorHandler(app: FastifyInstance): void {
     if (err instanceof BankInputError) return reply.code(422).send({ error: err.message });
     if (err instanceof ExtractionInputError) return reply.code(422).send({ error: err.message });
     if (err instanceof ExtractionStateError) return reply.code(409).send({ error: err.message });
+    if (err instanceof ImportApprovalBlockedError) return reply.code(409).send({ error: err.message, blockers: err.blockers });
     if (err instanceof ImportInputError) return reply.code(422).send({ error: err.message });
     if (err instanceof ImportStateError) return reply.code(409).send({ error: err.message });
     if (err instanceof ExtractorError) {

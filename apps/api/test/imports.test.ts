@@ -323,3 +323,79 @@ describe("imports: review", () => {
     expect((await call(w.owner, "GET", `${w.base}/${bid}`)).statusCode).toBe(200); // still readable for audit
   });
 });
+
+// ---------------------------------------------------------------- approval
+describe("imports: approval", () => {
+  it("is writer-only, reports blockers as a 409 body, then posts everything in one go", async () => {
+    const w = await world();
+    const up = await stage(w);
+    expect(up.statusCode).toBe(201);
+    const bid: string = up.json().batch.id;
+    const url = `${w.base}/${bid}/approve`;
+
+    // Viewers cannot approve; anonymous callers are not signed in.
+    expect((await call(w.people["viewer"]!, "POST", url)).statusCode).toBe(403);
+    expect((await call(null, "POST", url)).statusCode).toBe(401);
+
+    // Blocked: one invalid entry and three undecided accounts. The body says exactly what.
+    const blocked = await call(w.people["bookkeeper"]!, "POST", url);
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json().blockers.invalidEntries).toBe(1);
+    expect(blocked.json().blockers.unmappedAccounts.map((a: { sourceName: string }) => a.sourceName).sort())
+      .toEqual(["Test Checking", "Test Income", "Test Supplies"]);
+    expect(await ledgerLineCount(w)).toBe(0);
+
+    // Map. A class mismatch (Income account onto an asset account) is refused with 422.
+    const chk = await importAccountId(w, bid, "Test Checking");
+    const inc = await importAccountId(w, bid, "Test Income");
+    const sup = await importAccountId(w, bid, "Test Supplies");
+    const put = (aid: string, body: unknown) => call(w.owner, "PUT", `${w.base}/${bid}/accounts/${aid}/mapping`, body);
+    expect((await put(inc, { kind: "target", accountId: w.acct("1010") })).statusCode).toBe(422);
+    expect((await put(chk, { kind: "target", accountId: w.acct("1010") })).statusCode).toBe(200);
+    expect((await put(inc, { kind: "create", name: "Imported Income", type: "income" })).statusCode).toBe(200);
+    expect((await put(sup, { kind: "create", name: "Imported Supplies", type: "expense" })).statusCode).toBe(200);
+
+    // Still blocked by the invalid entry until it is excluded.
+    const still = await call(w.owner, "POST", url);
+    expect(still.statusCode).toBe(409);
+    expect(still.json().blockers.unmappedAccounts).toEqual([]);
+    const invalidId: string = (await call(w.owner, "GET", `${w.base}/${bid}/entries?status=invalid`)).json().entries[0].id;
+    expect((await call(w.owner, "PATCH", `${w.base}/${bid}/entries/${invalidId}`, { excluded: true })).statusCode).toBe(200);
+
+    const ok = await call(w.people["bookkeeper"]!, "POST", url);
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json()).toMatchObject({ posted: 2, accountsCreated: 2, alreadyImported: 0 });
+    expect(ok.json().batch.status).toBe("approved");
+    expect(await ledgerLineCount(w)).toBe(4);
+
+    const acts = await actions(w);
+    expect(acts).toContain("import.approve");
+    expect(acts.filter((a) => a === "account.create")).toHaveLength(2);
+
+    // Terminal: a second approval is a conflict and posts nothing more.
+    expect((await call(w.owner, "POST", url)).statusCode).toBe(409);
+    expect(await ledgerLineCount(w)).toBe(4);
+    // And the approved batch still reads fine for audit.
+    expect((await call(w.people["viewer"]!, "GET", `${w.base}/${bid}`)).statusCode).toBe(200);
+  });
+
+  it("will not approve into locked books and names the earliest locked date", async () => {
+    const w = await world();
+    const bid: string = (await stage(w)).json().batch.id;
+    const chk = await importAccountId(w, bid, "Test Checking");
+    const inc = await importAccountId(w, bid, "Test Income");
+    const sup = await importAccountId(w, bid, "Test Supplies");
+    const put = (aid: string, body: unknown) => call(w.owner, "PUT", `${w.base}/${bid}/accounts/${aid}/mapping`, body);
+    await put(chk, { kind: "target", accountId: w.acct("1010") });
+    await put(inc, { kind: "target", accountId: w.acct("4000") });
+    await put(sup, { kind: "create", name: "Imported Supplies", type: "expense" });
+    const invalidId: string = (await call(w.owner, "GET", `${w.base}/${bid}/entries?status=invalid`)).json().entries[0].id;
+    await call(w.owner, "PATCH", `${w.base}/${bid}/entries/${invalidId}`, { excluded: true });
+    await admin.query("UPDATE businesses SET books_locked_through = '2024-01-15' WHERE id = $1", [w.biz]);
+
+    const res = await call(w.owner, "POST", `${w.base}/${bid}/approve`);
+    expect(res.statusCode).toBe(409);
+    expect(res.json().blockers.lockedEntries).toEqual({ count: 1, lockedThrough: "2024-01-15", earliest: "2024-01-15" });
+    expect(await ledgerLineCount(w)).toBe(0);
+  });
+});

@@ -19,6 +19,7 @@ import { NotFoundError } from '../bank/connections.js';
 import { audit } from '../ledger.js';
 import type { AccountType, MembershipRole } from '../types.js';
 import { uuidv7 } from '../uuid.js';
+import { expectedAccountType } from './class.js';
 
 export const IMPORT_WRITER_ROLES: readonly MembershipRole[] = ['owner', 'admin', 'bookkeeper'];
 export const MAX_IMPORT_ENTRIES = 20_000;
@@ -436,12 +437,24 @@ export async function listEntries(
 
 // ----------------------------------------------------------------- change
 /** Decide what an imported account becomes: an existing account, a new one, or undecided again. */
+/** Default 2: an account may only be mapped to, or created as, the type its source class implies. */
+function assertClassMatches(src: { source_name: string; source_group: string }, actual: AccountType): void {
+  const expected = expectedAccountType(src.source_group);
+  if (expected && expected !== actual) {
+    throw new ImportInputError(
+      `"${src.source_name}" is a ${src.source_group} account in the source, so it must map to a ${expected} account, not ${actual}`);
+  }
+}
+
 export async function setAccountMapping(
   c: PoolClient, businessId: string, actor: string, batchId: string, importAccountId: string, decision: MappingDecision,
 ): Promise<ImportAccount> {
   await lockStagedBatch(c, businessId, batchId);
-  const cur = await c.query<{ target_account_id: string | null; create_name: string | null; create_type: string | null }>(
-    `SELECT target_account_id, create_name, create_type FROM import_accounts
+  const cur = await c.query<{
+    target_account_id: string | null; create_name: string | null; create_type: string | null;
+    source_name: string; source_group: string;
+  }>(
+    `SELECT target_account_id, create_name, create_type, source_name, source_group FROM import_accounts
       WHERE business_id = $1 AND batch_id = $2 AND id = $3 FOR UPDATE`, [businessId, batchId, importAccountId]);
   if (!cur.rows[0]) throw new NotFoundError('import account');
 
@@ -449,17 +462,19 @@ export async function setAccountMapping(
   let createName: string | null = null;
   let createType: AccountType | null = null;
   if (decision.kind === 'target') {
-    const acct = await c.query<{ archived: boolean }>(
-      'SELECT archived_at IS NOT NULL AS archived FROM accounts WHERE business_id = $1 AND id = $2',
+    const acct = await c.query<{ archived: boolean; type: AccountType }>(
+      'SELECT archived_at IS NOT NULL AS archived, type FROM accounts WHERE business_id = $1 AND id = $2',
       [businessId, decision.accountId]);
     if (!acct.rows[0]) throw new NotFoundError('account');
     if (acct.rows[0].archived) throw new ImportInputError('account is archived');
+    assertClassMatches(cur.rows[0], acct.rows[0].type);
     target = decision.accountId;
   } else if (decision.kind === 'create') {
     createName = decision.name.trim();
     if (createName.length < 1 || createName.length > 200) throw new ImportInputError('account name must be 1 to 200 characters');
     if (!ACCOUNT_TYPES.includes(decision.type)) throw new ImportInputError('invalid account type');
     createType = decision.type;
+    assertClassMatches(cur.rows[0], decision.type);
   }
   await c.query(
     `UPDATE import_accounts SET target_account_id = $4, create_name = $5, create_type = $6::account_type, updated_at = now()
