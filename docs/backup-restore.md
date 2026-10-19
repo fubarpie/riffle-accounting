@@ -1,9 +1,20 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Backup and restore
 
-> **Status: draft, commands not yet exercised end to end.** The commands below follow the
-> layout in `docker-compose.yml` but have not been run against a live stack. Do a trial
-> restore on a scratch machine before relying on them (see "Test your backups").
+> **WARNING - DRAFT, NOT YET TESTED.** None of the commands below have been run end to end
+> against a live stack. Do not rely on this guide for a real recovery until a trial restore on a
+> scratch machine has been completed (see "Test your backups"). Known open points:
+>
+> 1. **Volume name.** `riffle_riffle-statements` assumes the default Compose project name `riffle`.
+>    Confirm with `docker volume ls` before running the vault commands.
+> 2. **Restore order.** The step that starts the API once to create the schema and the
+>    `riffle_app` role before `pg_restore` is unverified.
+> 3. **Row-level security.** It is not yet confirmed that the RLS policies and grants survive
+>    `pg_restore --clean --no-owner`. A restore that loses them could leave a database with **no
+>    tenant isolation**. After any restore, verify isolation as the `riffle_app` role before
+>    putting the system back in use.
+>
+> A wrong restore can overwrite existing data. Only restore onto a stack you are willing to lose.
 
 ## What to back up
 
