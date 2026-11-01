@@ -11,9 +11,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fastify/cookie": "^11.1.3",
+    "@fastify/cookie": "^11.1.5",
     "@fastify/multipart": "^9",
-    "@fastify/static": "^10.1.6",
+    "@fastify/static": "^10.1.8",
     "@riffle/db": "workspace:^",
     "@riffle/extractor": "workspace:^",
     "@riffle/simplefin": "workspace:^",
@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@riffle/shared": "workspace:*",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/pg": "^8.11.10",
     "embedded-postgres": "16.14.0-beta.17",
     "tsup": "^9.0.0",
